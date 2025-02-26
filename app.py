@@ -1,4 +1,3 @@
-
 import streamlit as st
 import cv2
 import numpy as np
@@ -19,7 +18,7 @@ st.markdown("""
         font-size: 36px;
         font-weight: bold;
         text-align: center;
-        color: #2E86C1;
+        color:rgb(209, 70, 45);
         animation: fadeIn 2s;
         margin-top: 20px;
     }
@@ -108,11 +107,11 @@ if selected_menu == "Home":
         uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
         if uploaded_file is not None:
             image = Image.open(uploaded_file)
-            st.image(image, caption='Uploaded Image', use_column_width=True)
+            st.image(image, caption='Uploaded Image', use_container_width=True)
             img_array = np.array(image)
             results = model(img_array, conf=confidence)
             detected_objects = process_results(results, img_array)
-            st.image(img_array, caption='Detected Objects', use_column_width=True)
+            st.image(img_array, caption='Detected Objects', use_container_width=True)
 
     elif source == "Video":
         uploaded_file = st.file_uploader("Choose a video...", type=["mp4", "avi"])
@@ -120,22 +119,31 @@ if selected_menu == "Home":
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(uploaded_file.read())
             cap = cv2.VideoCapture(tfile.name)
-            ret, frame = cap.read()
-            if ret:
+            
+            stframe = st.empty()
+            
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
                 results = model(frame, conf=confidence)
                 detected_objects = process_results(results, frame)
-                st.image(frame, caption='Detected Objects', use_column_width=True)
+                stframe.image(frame, channels="BGR", use_container_width=True)
             cap.release()
 
     elif source == "Webcam":
         run = st.checkbox('Run Webcam')
         if run:
             cap = cv2.VideoCapture(0)
-            ret, frame = cap.read()
-            if ret:
+            stframe = st.empty()
+            
+            while run:
+                ret, frame = cap.read()
+                if not ret:
+                    break
                 results = model(frame, conf=confidence)
                 detected_objects = process_results(results, frame)
-                st.image(frame, caption='Detected Objects', use_column_width=True)
+                stframe.image(frame, channels="BGR", use_container_width=True)
             cap.release()
 
     # Display the list of detected objects
@@ -150,11 +158,11 @@ if selected_menu == "Home":
 elif selected_menu == "How to Use":
     st.subheader("How to Use the Object Detection System")
     st.write("""
-        1. **Click on given link to acess on Browser** (sensors, cameras, control unit)
-        2. **Select the Input Resource** to your home network
-        3. **Set model Confidence level** via the mobile app or web interface
-        4. **Select image, Video, Webcam** in real-time through the app
-        5. **Receive alerts and notifications** for any detected intrusions
+        1. **Click on given link to access on Browser** 
+        2. **Select the Input Resource** 
+        3. **Set model Confidence level** 
+        4. **Select image, Video, Webcam** 
+        5. **It is Automatically Start Detecting given Source** 
     """)
 
 elif selected_menu == "About the Project":
@@ -175,7 +183,5 @@ elif selected_menu == "Developed By":
         - **Sanket Tajne** UI/UX Designer
         - **Mohit Barse:** PPT Creation and Present
         - **Kshitij Deshmukh:** Software Work
-        
+
     """)
-
-

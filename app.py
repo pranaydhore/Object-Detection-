@@ -5,8 +5,12 @@ from PIL import Image
 from ultralytics import YOLO
 import tempfile
 
+@st.cache_resource
+def load_model():
+    return YOLO('weights/yolov8n.pt')
+
 # Load YOLOv8 model
-model = YOLO('weights/yolov8n.pt')
+model = load_model()
 
 # Custom CSS for styling
 st.markdown("""
@@ -18,7 +22,7 @@ st.markdown("""
         font-size: 36px;
         font-weight: bold;
         text-align: center;
-        color:rgb(209, 70, 45);
+        color: #2E86C1;
         animation: fadeIn 2s;
         margin-top: 20px;
     }
@@ -68,16 +72,13 @@ st.markdown("""
 st.markdown('<div class="title">Object Detection System</div>', unsafe_allow_html=True)
 
 # Sidebar menu
-menu_items = ["Home", "How to Use", "About the Project", "Developed By"]
+menu_items = ["Home", "How to Use", "About the Project", "Developed By", "Live Detection"]
 selected_menu = st.sidebar.selectbox("Menu", menu_items)
 
 # Page content based on menu selection
 if selected_menu == "Home":
     st.subheader("Welcome to the Object Detection System")
-    st.write("""
-        - Introduction to the Object Detection System
-
-    """)
+    st.write("This is a simple UI design created using Streamlit. Explore the menu to learn more about the project and how to use it.")
 
     # Select input source
     source = st.selectbox("Select Input Source", ["Image", "Video", "Webcam"])
@@ -107,11 +108,11 @@ if selected_menu == "Home":
         uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
         if uploaded_file is not None:
             image = Image.open(uploaded_file)
-            st.image(image, caption='Uploaded Image', use_container_width=True)
+            st.image(image, caption='Uploaded Image', use_column_width=True)
             img_array = np.array(image)
             results = model(img_array, conf=confidence)
             detected_objects = process_results(results, img_array)
-            st.image(img_array, caption='Detected Objects', use_container_width=True)
+            st.image(img_array, caption='Detected Objects', use_column_width=True)
 
     elif source == "Video":
         uploaded_file = st.file_uploader("Choose a video...", type=["mp4", "avi"])
@@ -119,31 +120,22 @@ if selected_menu == "Home":
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(uploaded_file.read())
             cap = cv2.VideoCapture(tfile.name)
-            
-            stframe = st.empty()
-            
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
+            ret, frame = cap.read()
+            if ret:
                 results = model(frame, conf=confidence)
                 detected_objects = process_results(results, frame)
-                stframe.image(frame, channels="BGR", use_container_width=True)
+                st.image(frame, caption='Detected Objects', use_column_width=True)
             cap.release()
 
     elif source == "Webcam":
         run = st.checkbox('Run Webcam')
         if run:
             cap = cv2.VideoCapture(0)
-            stframe = st.empty()
-            
-            while run:
-                ret, frame = cap.read()
-                if not ret:
-                    break
+            ret, frame = cap.read()
+            if ret:
                 results = model(frame, conf=confidence)
                 detected_objects = process_results(results, frame)
-                stframe.image(frame, channels="BGR", use_container_width=True)
+                st.image(frame, caption='Detected Objects', use_column_width=True)
             cap.release()
 
     # Display the list of detected objects
@@ -158,30 +150,57 @@ if selected_menu == "Home":
 elif selected_menu == "How to Use":
     st.subheader("How to Use the Object Detection System")
     st.write("""
-        1. **Click on given link to access on Browser** 
-        2. **Select the Input Resource** 
-        3. **Set model Confidence level** 
-        4. **Select image, Video, Webcam** 
-        5. **It is Automatically Start Detecting given Source** 
+        1. Select the "Home" menu to return to the welcome page.
+        2. Navigate through the different menu options to explore the project.
+        3. Each menu option will provide specific information related to the project.
     """)
 
 elif selected_menu == "About the Project":
     st.subheader("About the Object Detection System Project")
     st.write("""
-        - **Objective:** To Easily Detect Every Object in Image or Video.
-        - **Components Used:** Computer, Laptop, Smart Phone.
-        - **Technology:** YOLO V8, Streamlit, OpenCV, PIL More
-        - **Features:** Real-time monitoring, intrusion detection, Accuracy, remote access
-        - **Benefits:** Enhanced security, peace of mind, easy installation and use
+        This project demonstrates a simple object detection system using a user-friendly web interface built with Streamlit.
     """)
 
 elif selected_menu == "Developed By":
-    st.subheader("Meet the Developers")
+    st.header("Meet Project Guide & Developer")
+    st.subheader("Project Guide :- ")
+    st.write("""- **Dr. Suhashini Chaurasiya**""")
+    st.subheader("Developers :- ")
     st.write("""
-        - **Paras Longadge:** Project Leader
-        - **Pranay Dhore:** Lead Developer
-        - **Sanket Tajne** UI/UX Designer
-        - **Mohit Barse:** PPT Creation and Present
-        - **Kshitij Deshmukh:** Software Work
-
+        - **Paras Longadge**: Project Leader
+        - **Pranay Dhore**: Lead Developer
+        - **Sanket Tajne**: UI/UX Designer
+        - **Mohit Barse**: Presentation Creator
+        - **Kshitij Deshmukh**: Software Developer
     """)
+
+elif selected_menu == "Live Detection":
+    st.subheader("Live Object Detection with Webcam")
+    run = st.checkbox('Run Webcam')
+    if run:
+        cap = cv2.VideoCapture(0)
+        stframe = st.empty()
+        
+        while run:
+            ret, frame = cap.read()
+            if not ret:
+                st.write("Failed to capture image")
+                break
+                
+            # Perform object detection
+            results = model(frame)
+            
+            # Process results
+            for result in results:
+                for bbox in result.boxes:
+                    x1, y1, x2, y2 = map(int, bbox.xyxy[0])
+                    label = model.names[int(bbox.cls)]
+                    conf = float(bbox.conf)  # Convert tensor to float
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(frame, f"{label} ({conf:.2f})", (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            
+            stframe.image(frame, channels="BGR", use_column_width=True)
+        
+        cap.release()
+
